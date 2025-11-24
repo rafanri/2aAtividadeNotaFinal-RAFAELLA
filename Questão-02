@@ -1,0 +1,124 @@
+<?php
+require 'database.php';
+
+$tarefas = $db->query("SELECT * FROM tarefas ORDER BY concluida, data_vencimento")->fetchAll(PDO::FETCH_ASSOC);
+?>
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <title>Sistema de Tarefas</title>
+    <style>
+        body { font-family: Arial; margin: 30px; }
+        table { border-collapse: collapse; width: 700px; margin-top: 20px; }
+        th, td { border: 1px solid #ccc; padding: 10px; }
+        th { background: #eee; }
+        .done { background: #d3ffd3; }
+    </style>
+</head>
+<body>
+
+<h1>Sistema de Tarefas</h1>
+
+<h2>Adicionar Nova Tarefa</h2>
+<form method="POST" action="add_tarefa.php">
+    <input type="text" name="descricao" placeholder="Descrição da tarefa" required><br><br>
+    <input type="date" name="data_vencimento"><br><br>
+    <button type="submit">Adicionar</button>
+</form>
+
+<h2>Lista de Tarefas</h2>
+
+<table>
+    <tr>
+        <th>ID</th>
+        <th>Descrição</th>
+        <th>Data de Vencimento</th>
+        <th>Status</th>
+        <th>Ações</th>
+    </tr>
+
+    <?php foreach ($tarefas as $t): ?>
+    <tr class="<?= $t['concluida'] ? 'done' : '' ?>">
+        <td><?= $t['id'] ?></td>
+        <td><?= $t['descricao'] ?></td>
+        <td><?= $t['data_vencimento'] ?: '—' ?></td>
+        <td><?= $t['concluida'] ? 'Concluída' : 'Pendente' ?></td>
+        <td>
+            <?php if (!$t['concluida']): ?>
+                <a href="update_tarefa.php?id=<?= $t['id'] ?>">Concluir</a>
+                |
+            <?php endif; ?>
+            <a href="delete_tarefa.php?id=<?= $t['id'] ?>" onclick="return confirm('Excluir tarefa?')">Excluir</a>
+        </td>
+    </tr>
+    <?php endforeach; ?>
+</table>
+
+</body>
+</html>
+
+//database
+
+<?php
+try {
+    $db = new PDO('sqlite:tarefas.db');
+    $db->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+
+    
+    $db->exec("
+        CREATE TABLE IF NOT EXISTS tarefas (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            descricao TEXT NOT NULL,
+            data_vencimento TEXT,
+            concluida INTEGER DEFAULT 0
+        )
+    ");
+} catch (Exception $e) {
+    echo "Erro: " . $e->getMessage();
+    exit;
+}
+?>
+
+//add_tarefa
+
+<?php
+require 'database.php';
+
+$descricao = $_POST['descricao'];
+$data = $_POST['data_vencimento'];
+
+$stmt = $db->prepare("INSERT INTO tarefas (descricao, data_vencimento) VALUES (?, ?)");
+$stmt->execute([$descricao, $data]);
+
+header("Location: index.php");
+exit;
+?>
+
+//update
+
+<?php
+require 'database.php';
+
+$id = $_GET['id'];
+
+$stmt = $db->prepare("UPDATE tarefas SET concluida = 1 WHERE id = ?");
+$stmt->execute([$id]);
+
+header("Location: index.php");
+exit;
+?>
+
+//delete
+
+<?php
+require 'database.php';
+
+$id = $_GET['id'];
+
+$stmt = $db->prepare("DELETE FROM tarefas WHERE id = ?");
+$stmt->execute([$id]);
+
+header("Location: index.php");
+exit;
+?>
